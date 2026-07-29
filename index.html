@@ -5796,6 +5796,41 @@
             }
         }
 
+        function getRegionBackground(regionName) {
+            const backgrounds = {
+                "Aceh": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20ACEH.jpg",
+                "Bali": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20BALI.jpg",
+                "Jawa Barat": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20JABAR.jpg",
+                "Jambi": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20JAMBI.jpg",
+                "Jawa Timur": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20JATIM.jpg",
+                "Kalimantan Barat": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20KALBAR.jpg",
+                "Kepulauan Riau": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20KEPRI.jpg",
+                "Lampung": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20LAMPUNG.jpg",
+                "Maluku": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20MALUKU.jpg",
+                "Nusa Tenggara Timur": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20NTT.jpg",
+                "Sulawesi Selatan / Toraja": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20SULSEL.jpg",
+                "Sumatera Barat": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20SUMBAR.jpg",
+                "Sumatera Selatan": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20SUMSEL.jpg",
+                "Sumatera Utara": "https://raw.githubusercontent.com/ayaarawrr001-byte/RO-july/3723fe7e705e0ce03b43436765bc1ea811f8f527/GAME%20SUMUT.jpg"
+            };
+
+            return backgrounds[regionName] || "";
+        }
+
+        function preloadRegionBackground(url, fallback) {
+            return new Promise((resolve) => {
+                if (!url) {
+                    resolve(fallback);
+                    return;
+                }
+
+                const image = new Image();
+                image.onload = () => resolve(url);
+                image.onerror = () => resolve(fallback);
+                image.src = url;
+            });
+        }
+
         function openAdventureOverlay(isRestoring = false) {
             state.currentScreen = 'adventure';
             hideBoardToken();
@@ -5815,6 +5850,17 @@
             document.getElementById('adventure-instrument-name').innerText = instrument.name;
             document.getElementById('adventure-instrument-image').src = instrument.image || 'https://raw.githubusercontent.com/lesmanaalit85-oss/resonance-odyssey/2316af59054f31128ec8fb930243ec71875b4051/Hijau%20dan%20Biru%20Warna-warni%20Lucu%20Ilustrasi%20Alam%20Doa%20Masuk%20Rumah%20A4%20Dokumen%20(Logo).png';
             document.getElementById('adventure-instrument-image').alt = `Alat Musik ${instrument.name}`;
+            
+            const stage = document.getElementById('adventure-stage');
+            const fallbackBackground = 'https://raw.githubusercontent.com/yuramarvellyn-cmyk/RESONANCE-ODYSSEY-JUNI/ce94bd70c9afe0ea3e51ea04386e98f00a953784/mini%20game.png';
+            const backgroundUrl = getRegionBackground(region.name) || fallbackBackground;
+
+            preloadRegionBackground(backgroundUrl, fallbackBackground).then((bgUrl) => {
+                stage.style.backgroundImage = `url('${bgUrl}')`;
+                stage.style.backgroundSize = 'cover';
+                stage.style.backgroundPosition = 'center';
+                stage.style.backgroundRepeat = 'no-repeat';
+            });
             
             // Update instruction
             document.getElementById('adventure-instruction').innerText = '';
