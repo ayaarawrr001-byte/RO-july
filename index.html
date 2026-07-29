@@ -93,6 +93,19 @@
             gap: clamp(4px, 0.6vw, 8px);
         }
 
+        .end-actions {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: clamp(12px, 1vw, 14px);
+        }
+
+        #restart-game-btn {
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
         .home-welcome {
             font-family: 'Times New Roman', Times, serif;
         }
@@ -4022,9 +4035,15 @@
             <div id="end-message"></div>
             <div id="end-score" style="margin: clamp(12px, 1.2vw, 16px) 0; font-size: clamp(16px, 2vw, 20px); font-weight: 700; color: var(--dark-outline);"></div>
             <div id="end-summary" style="margin-bottom: clamp(12px, 1.2vw, 16px); font-size: clamp(14px, 2vw, 18px); color: var(--dark-outline);"></div>
-            <div style="display:flex;gap:12px;flex-direction:column;">
-                <button class="btn-gold" onclick="restartGame()">MAIN LAGI 🔄</button>
-                <button class="btn-gold" style="background:linear-gradient(135deg,#fff 0%,#e6f4ff 100%);color:var(--dark-outline);border:1px solid rgba(127,167,225,0.28);" onclick="backToMenu()">KEMBALI KE MENU ◀</button>
+            <div class="end-actions">
+                <button
+                    id="restart-game-btn"
+                    class="btn-gold"
+                    type="button"
+                    onclick="restartGame()"
+                >
+                    MAIN LAGI
+                </button>
             </div>
         </div>
     </div>
@@ -4179,6 +4198,7 @@
             quizTimerId: null,
             quizTimedOut: false
         };
+        let isRestartingGame = false;
         
         const TRAVEL_DURATION = 5000; // 5 seconds untuk perjalanan (agar musik bisa dimainkan)
         const TRAVEL_SETTLE = 3000; // ms: jeda singkat saat avatar menetap di wilayah baru sebelum mini-game (3 detik)
@@ -4356,6 +4376,8 @@
 
         function clearGameProgress() {
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('resonanceOdysseySave');
+            localStorage.removeItem('gameState');
         }
 
         function saveGameState(currentScreen = state.currentScreen) {
@@ -5198,20 +5220,6 @@
             saveGameState(state.currentScreen);
         }
 
-        function backToMenu() {
-            // Hide end overlay and show adventure overlay (main menu)
-            const end = document.getElementById('end-overlay');
-            const adv = document.getElementById('adventure-overlay');
-            if (end) end.classList.remove('show');
-            if (adv) {
-                adv.classList.remove('hidden');
-                adv.classList.add('show');
-            } else {
-                // fallback: reload page
-                location.reload();
-            }
-        }
-
         function checkAns(correct, selectedButton) {
             const buttons = document.querySelectorAll('#quiz-options .quiz-opt-btn');
             buttons.forEach((button, idx) => {
@@ -5318,22 +5326,67 @@
         }
 
         function restartGame() {
-            clearGameProgress();
+            isRestartingGame = true;
+
+            if (typeof stopRegionQuizTimer === 'function') {
+                stopRegionQuizTimer(true);
+            }
+
+            if (state.autoTimer) {
+                clearTimeout(state.autoTimer);
+                state.autoTimer = null;
+            }
+
+            if (state.quizTimerId) {
+                clearInterval(state.quizTimerId);
+                state.quizTimerId = null;
+            }
+
+            if (
+                typeof adventureState !== 'undefined' &&
+                adventureState.rafId
+            ) {
+                cancelAnimationFrame(adventureState.rafId);
+                adventureState.rafId = null;
+            }
+
+            if (typeof adventureState !== 'undefined') {
+                adventureState.running = false;
+            }
+
+            if (state.currentAudio) {
+                state.currentAudio.pause();
+                state.currentAudio.currentTime = 0;
+                state.currentAudio = null;
+            }
+
+            if (typeof stopAdventureMusic === 'function') {
+                stopAdventureMusic();
+            }
+
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('resonanceOdysseySave');
+            localStorage.removeItem('gameState');
+
             state.idx = 0;
             state.visited = new Set();
+            state.answers = [];
             state.score = 0;
             state.active = false;
             state.completed = false;
+            state.isMoving = false;
             state.card3Answered = false;
             state.card4Answered = false;
             state.answeredCardsByRegion = {};
-            state.answers = [];
             state.quizDeadline = null;
             state.quizTimerRegionIdx = null;
             state.quizTimerId = null;
             state.quizTimedOut = false;
             state.currentScreen = 'home';
-            location.reload();
+            state.autoMode = false;
+            state.autoPaused = false;
+
+            window.location.reload();
         }
 
         function finish(win) {
@@ -6369,11 +6422,27 @@ Jika tidak ada energi yang hilang (ideal), pernyataan yang benar adalah …</div
         });
 
         window.addEventListener('beforeunload', () => {
+            if (isRestartingGame) {
+                return;
+            }
+
+            if (
+                state.completed === true ||
+                state.currentScreen === 'end'
+            ) {
+                localStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+
             saveGameState();
         });
 
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
+            if (
+                document.visibilityState === 'hidden' &&
+                !isRestartingGame &&
+                state.completed !== true
+            ) {
                 saveGameState();
             }
         });
