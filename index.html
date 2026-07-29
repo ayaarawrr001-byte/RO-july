@@ -4184,7 +4184,174 @@
         const TRAVEL_SETTLE = 3000; // ms: jeda singkat saat avatar menetap di wilayah baru sebelum mini-game (3 detik)
         const DEFAULT_PREVIEW_IMAGE = 'https://raw.githubusercontent.com/AYAA-lab/resonance-odyssey/0e31389538a02c42684025cbc04d8fb04add8b76/JAKARTA.png';
         const STORAGE_KEY = 'resonanceOdysseySaveV1';
-        
+        const TOTAL_REGIONS = 15;
+        const TIERS_PER_REGION = 2;
+        const TOTAL_QUESTIONS = TOTAL_REGIONS * TIERS_PER_REGION;
+        const MAX_SCORE = 100;
+
+        function createQuestionKey(regionIndex, tierNumber) {
+            return `${regionIndex}-tier-${tierNumber}`;
+        }
+
+        function normalizeAnswers() {
+            if (!Array.isArray(state.answers)) {
+                state.answers = [];
+                return;
+            }
+
+            const uniqueAnswers = new Map();
+
+            state.answers.forEach(answer => {
+                let rawIndex = Number(
+                    answer.regionIndex ?? answer.questionId
+                );
+                if (!Number.isInteger(rawIndex)) {
+                    return;
+                }
+
+                let regionIndex = rawIndex;
+                if (rawIndex >= 1 && rawIndex <= TOTAL_REGIONS) {
+                    regionIndex = rawIndex - 1;
+                }
+
+                const tierNumber = Number(answer.tier);
+
+                if (
+                    !Number.isInteger(regionIndex) ||
+                    regionIndex < 0 ||
+                    regionIndex >= TOTAL_REGIONS ||
+                    (tierNumber !== 1 && tierNumber !== 2)
+                ) {
+                    return;
+                }
+
+                const questionKey =
+                    answer.questionKey ||
+                    createQuestionKey(regionIndex, tierNumber);
+
+                if (!uniqueAnswers.has(questionKey)) {
+                    uniqueAnswers.set(questionKey, {
+                        ...answer,
+                        questionKey,
+                        regionIndex,
+                        questionId: regionIndex,
+                        tier: tierNumber,
+                        correct: answer.correct === true
+                    });
+                }
+            });
+
+            state.answers = Array.from(uniqueAnswers.values());
+        }
+
+        function hasAnsweredQuestion(regionIndex, tierNumber) {
+            if (typeof tierNumber === 'undefined') {
+                return Array.isArray(state.answers) &&
+                    state.answers.some(answer => answer.questionKey === regionIndex);
+            }
+
+            const questionKey = createQuestionKey(regionIndex, tierNumber);
+            return Array.isArray(state.answers) &&
+                state.answers.some(answer => answer.questionKey === questionKey);
+        }
+
+        function recordAnswerOnce(
+            regionIndex,
+            tierNumber,
+            correct,
+            extraData = {}
+        ) {
+            if (!Array.isArray(state.answers)) {
+                state.answers = [];
+            }
+
+            if (
+                !Number.isInteger(regionIndex) ||
+                regionIndex < 0 ||
+                regionIndex >= TOTAL_REGIONS
+            ) {
+                console.error('Region index tidak valid:', regionIndex);
+                return false;
+            }
+
+            if (tierNumber !== 1 && tierNumber !== 2) {
+                console.error('Tier tidak valid:', tierNumber);
+                return false;
+            }
+
+            const questionKey = createQuestionKey(regionIndex, tierNumber);
+            if (hasAnsweredQuestion(regionIndex, tierNumber)) {
+                console.warn('Jawaban duplikat dicegah:', questionKey);
+                return false;
+            }
+
+            const city = cityData[regionIndex + 1];
+            state.answers.push({
+                questionKey,
+                questionId: regionIndex,
+                regionIndex,
+                cityName: city?.name || '',
+                tier: tierNumber,
+                correct: Boolean(correct),
+                timestamp: new Date().toISOString(),
+                ...extraData
+            });
+
+            normalizeAnswers();
+            state.score = calculateScore();
+
+            return true;
+        }
+
+        function getAnswerSummary() {
+            normalizeAnswers();
+
+            const correctCount = state.answers.filter(
+                answer => answer.correct === true
+            ).length;
+            const answeredCount = state.answers.length;
+
+            return {
+                correctCount,
+                answeredCount,
+                unansweredCount: Math.max(
+                    0,
+                    TOTAL_QUESTIONS - answeredCount
+                )
+            };
+        }
+
+        function calculateScore() {
+            const { correctCount } = getAnswerSummary();
+            const rawScore = (correctCount / TOTAL_QUESTIONS) * MAX_SCORE;
+            return Math.min(
+                MAX_SCORE,
+                Number(rawScore.toFixed(2))
+            );
+        }
+
+        function formatScore(score) {
+            return Number(score).toLocaleString('id-ID', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function finalizeMissingAnswersAsWrong() {
+            for (let regionIndex = 0; regionIndex < TOTAL_REGIONS; regionIndex++) {
+                for (let tierNumber = 1; tierNumber <= 2; tierNumber++) {
+                    if (!hasAnsweredQuestion(regionIndex, tierNumber)) {
+                        recordAnswerOnce(regionIndex, tierNumber, false, {
+                            autoFinalized: true,
+                            card: tierNumber === 1 ? 3 : 4
+                        });
+                    }
+                }
+            }
+
+            normalizeAnswers();
+        }
+
         let audioContext = null;
 
         function clearGameProgress() {
@@ -4198,6 +4365,9 @@
                 }
                 return;
             }
+
+            normalizeAnswers();
+            state.score = calculateScore();
 
             const saveData = {
                 version: 1,
@@ -4344,7 +4514,9 @@
             state.quizDeadline = Number(parsed.quizDeadline) || null;
             state.quizTimerRegionIdx = Number.isInteger(parsed.quizTimerRegionIdx) ? parsed.quizTimerRegionIdx : null;
             state.quizTimedOut = Boolean(parsed.quizTimedOut);
-            state.answers = Array.isArray(parsed.answers) ? parsed.answers : [];
+            state.answers = Array.isArray(parsed.answers) ? [...parsed.answers] : [];
+            normalizeAnswers();
+            state.score = calculateScore();
             state.currentScreen = parsed.currentScreen || 'game';
             state.completed = false;
 
@@ -4633,31 +4805,20 @@
             }
         }
 
-        function hasAnsweredQuestion(questionKey) {
-            return Array.isArray(state.answers) && state.answers.some(answer => answer.questionKey === questionKey);
-        }
-
         function recordTimedOutTier(tierNumber, cardNum) {
-            const questionKey = `${state.idx}-tier-${tierNumber}`;
-            if (hasAnsweredQuestion(questionKey)) {
+            const regionIndex = state.idx - 1;
+            if (regionIndex < 0 || regionIndex >= TOTAL_REGIONS) {
                 return;
             }
 
-            const city = cityData[state.idx];
-            state.answers.push({
-                questionKey,
-                questionId: state.idx,
-                cityName: city?.name || '',
-                tier: tierNumber,
-                card: cardNum,
-                correct: false,
-                timedOut: true,
-                timestamp: new Date().toISOString()
-            });
-        }
+            if (hasAnsweredQuestion(regionIndex, tierNumber)) {
+                return;
+            }
 
-        function calculateScore() {
-            return (state.answers || []).filter(answer => answer.correct).length;
+            recordAnswerOnce(regionIndex, tierNumber, false, {
+                timedOut: true,
+                card: cardNum
+            });
         }
 
         function setRegionQuizButtonsDisabled(disabled) {
@@ -5062,15 +5223,20 @@
                 }
             });
             
-            // Record jawaban
-            const questionId = state.idx;
-            state.answers.push({
-                questionId: questionId,
-                cityName: cityData[questionId].name,
-                correct: correct,
-                timestamp: new Date().toISOString()
+            const regionIndex = state.idx - 1;
+            if (regionIndex < 0 || regionIndex >= TOTAL_REGIONS) {
+                return;
+            }
+
+            const recorded = recordAnswerOnce(regionIndex, 1, correct, {
+                answerMode: 'quiz-overlay',
+                selectedAnswer: selectedButton?.innerText || ''
             });
-            
+
+            if (!recorded) {
+                return;
+            }
+
             const feedbackBox = document.getElementById('quiz-feedback-box');
             const icon = document.getElementById('feedback-icon');
             const title = document.getElementById('feedback-title');
@@ -5175,12 +5341,26 @@
             state.completed = true;
             state.currentScreen = 'end';
             stopRegionQuizTimer(true);
-            clearGameProgress();
             hideBoardToken();
             document.body.classList.remove('quiz-cards-active');
+
+            if (win) {
+                finalizeMissingAnswersAsWrong();
+            }
+
+            normalizeAnswers();
+            state.score = calculateScore();
+            if (state.answers.length > TOTAL_QUESTIONS) {
+                console.error('Jumlah jawaban melebihi 30', state.answers);
+                normalizeAnswers();
+            }
+
             const overlay = document.getElementById('end-overlay');
             const endScore = document.getElementById('end-score');
-            
+            const summaryElement = document.getElementById('end-summary');
+            const { correctCount, answeredCount } = getAnswerSummary();
+            const wrongCount = Math.max(0, TOTAL_QUESTIONS - correctCount);
+
             if (win) {
                 document.getElementById('end-title').innerText = "🏆 MAESTRO NUSANTARA";
                 document.getElementById('end-message').innerText = `Selamat, ${state.playerName}! Kamu telah menjelajahi seluruh simfoni Nusantara.`;
@@ -5190,21 +5370,18 @@
                 document.getElementById('end-message').innerText = "Permainan selesai. Coba lagi untuk meningkatkan skor dan jelajahi lebih banyak wilayah!";
                 document.getElementById('end-title').style.color = '#dc2626';
             }
-            
+
             if (endScore) {
-                endScore.innerText = `Skor akhir: ${state.score}`;
+                endScore.innerText = `Skor akhir: ${formatScore(state.score)}`;
             }
-            const correctCount = state.answers ? state.answers.filter(a => a.correct).length : 0;
-            const wrongCount = state.answers ? state.answers.filter(a => !a.correct).length : 0;
-            const totalCount = state.answers ? state.answers.length : 0;
-            const summaryElement = document.getElementById('end-summary');
+
             if (summaryElement) {
-                summaryElement.innerHTML = `Jawaban benar: <strong>${correctCount}</strong><br>Jawaban salah: <strong>${wrongCount}</strong><br>Total soal: <strong>${totalCount}</strong>`;
+                summaryElement.innerHTML = `Jawaban benar: <strong>${correctCount}</strong><br>Jawaban salah: <strong>${wrongCount}</strong><br>Total soal: <strong>${TOTAL_QUESTIONS}</strong>`;
             }
-            
-            // Kirim data ke spreadsheet
+
+            clearGameProgress();
+            saveGameState('end');
             sendGameDataToSpreadsheet(win);
-            
             overlay.classList.add('show');
         }
 
@@ -6093,12 +6270,12 @@ Jika tidak ada energi yang hilang (ideal), pernyataan yang benar adalah …</div
             if (!isFinal) return; // do nothing for per-region; only final summary is shown
 
             // Final summary for completing all regions
-            const correctCount = state.answers ? state.answers.filter(a => a.correct).length : 0;
-            const wrongCount = state.answers ? state.answers.filter(a => !a.correct).length : 0;
-            const total = state.answers ? state.answers.length : 0;
+            normalizeAnswers();
+            const { correctCount, answeredCount } = getAnswerSummary();
+            const wrongCount = Math.max(0, TOTAL_QUESTIONS - correctCount);
 
             title.innerText = `SELAMAT, KAMU MENYELESAIKAN SEMUA WILAYAH`;
-            summary.innerHTML = `Jawaban benar: <strong>${correctCount}</strong><br>Jawaban salah: <strong>${wrongCount}</strong><br>Total soal: <strong>${total}</strong>`;
+            summary.innerHTML = `Jawaban benar: <strong>${correctCount}</strong><br>Jawaban salah: <strong>${wrongCount}</strong><br>Total soal: <strong>${TOTAL_QUESTIONS}</strong>`;
 
             okBtn.onclick = () => {
                 overlay.classList.remove('show');
@@ -6122,48 +6299,38 @@ Jika tidak ada energi yang hilang (ideal), pernyataan yang benar adalah …</div
                 return;
             }
 
-            const questionId = state.idx;
-            const currentCity = cityData[questionId];
-            const cityName = currentCity ? currentCity.name : 'Unknown';
+            const regionIndex = state.idx - 1;
+            const tierNumber = cardNum === 3 ? 1 : 2;
             const options = document.getElementById(`options-${cardNum}`);
             const correctIndex = Number(options.dataset.correctIndex);
             const selectedLabel = selectedButton ? selectedButton.innerText : '';
             const correctLabel = options.querySelectorAll('button')[correctIndex]?.innerText || '';
-            const questionKey = `${state.idx}-tier-${cardNum === 3 ? 1 : 2}`;
-            
+            const questionKey = createQuestionKey(regionIndex, tierNumber);
+
             if (hasAnsweredQuestion(questionKey)) {
+                options?.querySelectorAll('button').forEach(button => button.disabled = true);
                 return;
             }
 
-            // Record jawaban
-            state.answers.push({
-                questionKey,
-                questionId: questionId,
-                cityName: cityName,
-                correct: correct,
-                timestamp: new Date().toISOString(),
+            options?.querySelectorAll('button').forEach(button => button.disabled = true);
+
+            const recorded = recordAnswerOnce(regionIndex, tierNumber, correct, {
                 card: cardNum,
-                tier: cardNum === 3 ? 1 : 2
+                selectedAnswer: selectedButton?.innerText || ''
             });
-            
-            // Feedback visual
+
+            if (!recorded) {
+                return;
+            }
+
             options.querySelectorAll('button').forEach((btn, idx) => {
-                btn.disabled = true;
                 if (idx === correctIndex) {
                     btn.classList.add('correct-answer');
                 } else if (btn === selectedButton && !correct) {
                     btn.classList.add('wrong-answer');
                 }
             });
-            
-            if (correct) {
-                playSound(523.25, 0.1);
-            } else {
-                playSound(98, 0.2);
-            }
-            state.score = calculateScore();
-            saveGameState(state.currentScreen);
-            
+
             if (cardNum === 3) {
                 state.card3Answered = true;
                 enableTier2Options();
