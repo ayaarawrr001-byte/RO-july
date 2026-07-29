@@ -1892,7 +1892,6 @@
             #quiz-cards-overlay .card-title {
                 min-height: auto !important;
             }
-        }
 
         /* Hide scrollbar visually while keeping scrolling enabled */
         .card-content,
@@ -4314,6 +4313,13 @@
                 tier: tierNumber,
                 correct: Boolean(correct),
                 timestamp: new Date().toISOString(),
+                selectedIndex: Number.isInteger(extraData.selectedIndex)
+                    ? Number(extraData.selectedIndex)
+                    : extraData.selectedIndex,
+                correctIndex: Number.isInteger(extraData.correctIndex)
+                    ? Number(extraData.correctIndex)
+                    : extraData.correctIndex,
+                selectedAnswer: extraData.selectedAnswer || '',
                 ...extraData
             });
 
@@ -4339,6 +4345,105 @@
                     TOTAL_QUESTIONS - answeredCount
                 )
             };
+        }
+
+        function getSavedAnswer(regionIndex, tierNumber) {
+            if (!Array.isArray(state.answers)) {
+                return null;
+            }
+
+            const questionKey = createQuestionKey(regionIndex, tierNumber);
+            return state.answers.find(answer => answer.questionKey === questionKey) || null;
+        }
+
+        function resolveSelectedIndex(savedAnswer, buttons) {
+            const savedIndex = Number(savedAnswer.selectedIndex);
+            if (Number.isInteger(savedIndex) && buttons[savedIndex]) {
+                return savedIndex;
+            }
+
+            const selectedText = String(savedAnswer.selectedAnswer || '')
+                .trim()
+                .replace(/\s+/g, ' ');
+
+            return buttons.findIndex(button =>
+                button.innerText
+                    .trim()
+                    .replace(/\s+/g, ' ') === selectedText
+            );
+        }
+
+        function restoreAnswerVisualState(regionIndex, tierNumber, cardNum) {
+            const savedAnswer = getSavedAnswer(regionIndex, tierNumber);
+            if (!savedAnswer) {
+                return;
+            }
+
+            const options = document.getElementById(`options-${cardNum}`);
+            if (!options) {
+                return;
+            }
+
+            const buttons = Array.from(options.querySelectorAll('button'));
+            if (!buttons.length) {
+                return;
+            }
+
+            buttons.forEach(button => {
+                button.classList.remove('correct-answer', 'wrong-answer');
+            });
+
+            const selectedIndex = resolveSelectedIndex(savedAnswer, buttons);
+            const correctIndex = Number.isInteger(Number(savedAnswer.correctIndex))
+                ? Number(savedAnswer.correctIndex)
+                : Number(options.dataset.correctIndex);
+
+            buttons.forEach(button => {
+                button.disabled = true;
+            });
+
+            if (Number.isInteger(correctIndex) && buttons[correctIndex]) {
+                buttons[correctIndex].classList.add('correct-answer');
+            }
+
+            if (
+                savedAnswer.correct === false &&
+                Number.isInteger(selectedIndex) &&
+                buttons[selectedIndex]
+            ) {
+                buttons[selectedIndex].classList.add('wrong-answer');
+            }
+
+            if (
+                savedAnswer.correct === true &&
+                Number.isInteger(selectedIndex) &&
+                buttons[selectedIndex]
+            ) {
+                buttons[selectedIndex].classList.add('correct-answer');
+            }
+        }
+
+        function restoreCurrentRegionAnswers() {
+            restoreAnswerVisualState(state.idx, 1, 3);
+
+            const tier1Answer = getSavedAnswer(state.idx, 1);
+            const tier2Answer = getSavedAnswer(state.idx, 2);
+
+            state.card3Answered = Boolean(tier1Answer);
+            state.card4Answered = Boolean(tier2Answer);
+
+            if (state.card3Answered && !state.card4Answered) {
+                enableTier2Options();
+            }
+
+            restoreAnswerVisualState(state.idx, 2, 4);
+
+            if (state.card4Answered) {
+                const tier2Options = document.getElementById('options-4');
+                tier2Options?.querySelectorAll('button').forEach(button => {
+                    button.disabled = true;
+                });
+            }
         }
 
         function calculateScore() {
@@ -4410,12 +4515,20 @@
                 answers: (state.answers || []).map(answer => ({
                     questionKey: answer.questionKey,
                     questionId: answer.questionId,
+                    regionIndex: answer.regionIndex,
                     cityName: answer.cityName,
-                    correct: Boolean(answer.correct),
-                    timestamp: answer.timestamp,
-                    card: answer.card,
                     tier: answer.tier,
-                    timedOut: Boolean(answer.timedOut)
+                    card: answer.card,
+                    selectedIndex: Number.isInteger(answer.selectedIndex)
+                        ? Number(answer.selectedIndex)
+                        : answer.selectedIndex,
+                    correctIndex: Number.isInteger(answer.correctIndex)
+                        ? Number(answer.correctIndex)
+                        : answer.correctIndex,
+                    selectedAnswer: answer.selectedAnswer || '',
+                    correct: Boolean(answer.correct),
+                    timedOut: Boolean(answer.timedOut),
+                    timestamp: answer.timestamp
                 }))
             };
 
@@ -5236,8 +5349,18 @@
                 return;
             }
 
+            const options = document.getElementById('quiz-options');
+            const selectedIndex = options
+                ? Array.from(options.querySelectorAll('button')).indexOf(
+                      selectedButton
+                  )
+                : -1;
+            const correctIndex = Number(state.currentQuiz.correct);
+
             const recorded = recordAnswerOnce(regionIndex, 1, correct, {
                 answerMode: 'quiz-overlay',
+                selectedIndex,
+                correctIndex,
                 selectedAnswer: selectedButton?.innerText || ''
             });
 
@@ -6252,6 +6375,15 @@ Jika tidak ada energi yang hilang (ideal), pernyataan yang benar adalah …</div
             state.currentScreen = 'quiz-cards';
             const overlay = document.getElementById('quiz-cards-overlay');
             overlay.classList.add('show');
+
+            if (restoreMode) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        restoreCurrentRegionAnswers();
+                    });
+                });
+            }
+
             startRegionQuizTimer(restoreMode);
             saveGameState(state.currentScreen);
 
@@ -6355,20 +6487,27 @@ Jika tidak ada energi yang hilang (ideal), pernyataan yang benar adalah …</div
             const regionIndex = state.idx - 1;
             const tierNumber = cardNum === 3 ? 1 : 2;
             const options = document.getElementById(`options-${cardNum}`);
-            const correctIndex = Number(options.dataset.correctIndex);
+            const correctIndex = Number(options?.dataset.correctIndex);
             const selectedLabel = selectedButton ? selectedButton.innerText : '';
-            const correctLabel = options.querySelectorAll('button')[correctIndex]?.innerText || '';
-            const questionKey = createQuestionKey(regionIndex, tierNumber);
+            const correctLabel = options ? options.querySelectorAll('button')[correctIndex]?.innerText || '' : '';
 
-            if (hasAnsweredQuestion(questionKey)) {
+            if (hasAnsweredQuestion(regionIndex, tierNumber)) {
                 options?.querySelectorAll('button').forEach(button => button.disabled = true);
                 return;
             }
 
             options?.querySelectorAll('button').forEach(button => button.disabled = true);
 
+            const selectedIndex = options
+                ? Array.from(options.querySelectorAll('button')).indexOf(
+                      selectedButton
+                  )
+                : -1;
+
             const recorded = recordAnswerOnce(regionIndex, tierNumber, correct, {
                 card: cardNum,
+                selectedIndex,
+                correctIndex,
                 selectedAnswer: selectedButton?.innerText || ''
             });
 
