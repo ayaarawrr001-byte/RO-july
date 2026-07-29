@@ -4850,10 +4850,23 @@
                 return;
             }
 
+            const characterIdMigration = {
+                'JAWA': 'jawa',
+                'SRIKANDI': 'srikandi',
+                'PRAJURIT': 'prajurit',
+                'PENJAGA': 'penjaga',
+                'PENYIHIR': 'penyihir'
+            };
+
+            let selectedCharacter = parsed.selectedCharacter || '';
+            if (characterIdMigration[selectedCharacter]) {
+                selectedCharacter = characterIdMigration[selectedCharacter];
+            }
+
             state.playerName = parsed.playerName || '';
             state.schoolName = parsed.schoolName || '';
             state.idx = Number(parsed.idx) || 0;
-            state.charId = parsed.selectedCharacter || '';
+            state.charId = selectedCharacter || '';
             state.score = Number(parsed.score) || 0;
             state.active = Boolean(parsed.active);
             state.visited = new Set(parsed.visited || []);
@@ -5040,11 +5053,11 @@
             const grid = document.getElementById('selection-grid');
             grid.innerHTML = '';
             const characters = [
-                { id: 'jawa', name: 'JAWA' },
-                { id: 'srikandi', name: 'Srikandi' },
-                { id: 'prajurit', name: 'Prajurit' },
-                { id: 'penjaga', name: 'Penjaga' },
-                { id: 'penyihir', name: 'Penyihir' }
+                { id: 'jawa', name: 'JAKA' },
+                { id: 'srikandi', name: 'KIRANA' },
+                { id: 'prajurit', name: 'WIRA' },
+                { id: 'penjaga', name: 'MAMBRI' },
+                { id: 'penyihir', name: 'CEMPAKA' }
             ];
 
             characters.forEach(c => {
