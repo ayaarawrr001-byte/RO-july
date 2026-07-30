@@ -654,6 +654,112 @@
                 position: absolute !important;
             }
         }
+
+        /* ===== HP-specific: remove large gap below board (mobile and desktop-site) =====
+           Targets both narrow viewports and touch-capable devices so "Situs desktop"
+           mode on phones receives the same layout fixes.
+        */
+        @media (max-width: 767px), (hover: none) and (pointer: coarse) {
+            html, body {
+                height: auto !important;
+                min-height: 100dvh !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+            }
+
+            body {
+                display: flex !important;
+                flex-direction: column !important;
+                grid-template-columns: none !important;
+                grid-template-rows: none !important;
+                align-items: stretch !important;
+                justify-content: flex-start !important;
+                gap: 0 !important;
+            }
+
+            #top-status {
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                margin: 0 !important;
+                padding: 8px 10px !important;
+            }
+
+            .game-main {
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                flex-grow: 0 !important;
+                justify-content: flex-start !important;
+                align-items: center !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                gap: 10px !important;
+                overflow: visible !important;
+            }
+
+            .game-board-wrapper {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                gap: 10px !important;
+                overflow: visible !important;
+            }
+
+            .monopoly-board {
+                width: min(94vw, 560px) !important;
+                max-width: 94vw !important;
+                height: auto !important;
+                min-height: 0 !important;
+                aspect-ratio: 1 / 1 !important;
+                flex: none !important;
+                margin: 0 auto !important;
+            }
+
+            .game-panel {
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                margin: 0 !important;
+                padding: 10px !important;
+                gap: 10px !important;
+                overflow: visible !important;
+            }
+
+            .status-bar,
+            .status-left,
+            .status-summary,
+            .panel-summary-grid {
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* Remove any large bottom padding/margins that may remain */
+            .game-main, .game-board-wrapper, .monopoly-board, .game-panel {
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+        }
     </style>
         .btn-dir {
             border-color: rgba(127, 167, 225, 0.32);
