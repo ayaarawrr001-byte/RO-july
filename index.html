@@ -4551,7 +4551,7 @@
     </div>
 
     <!-- QUIZ CARDS OVERLAY -->
-    <div id="quiz-cards-overlay" class="screen-overlay hidden">
+    <div id="quiz-cards-overlay" class="screen-overlay">
         <div class="content-card">
             <div class="quiz-cards-header">
                 <div class="quiz-header-spacer"></div>
@@ -4610,7 +4610,7 @@
     </div>
 
     <!-- QUIZ OVERLAY -->
-    <div id="quiz-overlay" class="screen-overlay centered-overlay hidden">
+    <div id="quiz-overlay" class="screen-overlay centered-overlay">
         <div class="content-card">
             <div class="quiz-header" id="quiz-header"></div>
             <div class="quiz-question" id="quiz-question"></div>
@@ -4625,7 +4625,7 @@
     </div>
 
     <!-- END GAME OVERLAY -->
-    <div id="end-overlay" class="screen-overlay centered-overlay hidden">
+    <div id="end-overlay" class="screen-overlay centered-overlay">
         <div class="content-card">
             <div id="end-title"></div>
             <div id="end-message"></div>
@@ -5142,9 +5142,7 @@
             document.getElementById('screen-instructions').classList.add('hidden');
             document.getElementById('top-status').classList.add('hidden');
             document.getElementById('quiz-overlay').classList.remove('show');
-            document.getElementById('quiz-overlay').classList.add('hidden');
             document.getElementById('quiz-cards-overlay').classList.remove('show');
-            document.getElementById('quiz-cards-overlay').classList.add('hidden');
             document.getElementById('adventure-overlay').classList.remove('show');
             document.getElementById('adventure-overlay').classList.add('hidden');
             document.getElementById('area-preview-overlay').classList.remove('show');
@@ -5167,15 +5165,12 @@
             document.getElementById('adventure-overlay').classList.remove('show');
             document.getElementById('adventure-overlay').classList.add('hidden');
             document.getElementById('quiz-overlay').classList.remove('show');
-            document.getElementById('quiz-overlay').classList.add('hidden');
             document.getElementById('quiz-cards-overlay').classList.remove('show');
-            document.getElementById('quiz-cards-overlay').classList.add('hidden');
             document.getElementById('area-preview-overlay').classList.remove('show');
             document.getElementById('area-preview-overlay').classList.add('hidden');
             document.getElementById('region-notification-overlay').classList.remove('show');
             document.getElementById('region-notification-overlay').classList.add('hidden');
             document.getElementById('end-overlay').classList.remove('show');
-            document.getElementById('end-overlay').classList.add('hidden');
             document.getElementById('answer-popup-overlay').classList.remove('show');
         }
 
@@ -5203,7 +5198,6 @@
                 document.body.classList.remove('quiz-cards-active');
                 const overlay = document.getElementById('end-overlay');
                 if (overlay) {
-                    overlay.classList.remove('hidden');
                     overlay.classList.add('show');
                 }
             } else {
@@ -5945,7 +5939,6 @@
             
             // pause auto-walk while quiz is shown
             state.autoPaused = true;
-            overlay.classList.remove('hidden');
             overlay.classList.add('show');
             saveGameState(state.currentScreen);
         }
@@ -6015,11 +6008,7 @@
             saveGameState(state.currentScreen);
 
             setTimeout(() => {
-                const quizOverlay = document.getElementById('quiz-overlay');
-                if (quizOverlay) {
-                    quizOverlay.classList.remove('show');
-                    quizOverlay.classList.add('hidden');
-                }
+                document.getElementById('quiz-overlay').classList.remove('show');
                 state.isMoving = false;
                 // kembalikan tampilan token papan saat quiz ditutup
                 showBoardToken();
@@ -6179,7 +6168,6 @@
             clearGameProgress();
             saveGameState('end');
             sendGameDataToSpreadsheet(win);
-            overlay.classList.remove('hidden');
             overlay.classList.add('show');
         }
 
@@ -7042,7 +7030,6 @@ Jika tidak ada energi yang hilang (ideal), pernyataan yang benar adalah …</div
 
             state.currentScreen = 'quiz-cards';
             const overlay = document.getElementById('quiz-cards-overlay');
-            overlay.classList.remove('hidden');
             overlay.classList.add('show');
 
             if (restoreMode) {
