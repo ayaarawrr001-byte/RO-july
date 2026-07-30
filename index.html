@@ -542,7 +542,119 @@
             border: 1px solid rgba(127, 167, 225, 0.24);
         }
 
-        .btn-gold,
+        /* ===== Touch-device layout fixes (includes HP "Situs desktop") =====
+           Use input-capability media query to detect touch devices instead
+           of viewport width so HP in desktop mode still receives mobile layout.
+        */
+        @media (hover: none) and (pointer: coarse) {
+            /* Page-level layout: use vertical flow and allow natural height */
+            body {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 100dvh !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                gap: 0 !important;
+            }
+
+            /* Top status should be compact and flow with page */
+            #top-status {
+                position: relative !important;
+                grid-column: auto !important;
+                grid-row: auto !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+            }
+
+            /* Main game area becomes compact column on touch devices */
+            .game-main {
+                position: relative !important;
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                flex: none !important;
+                justify-content: flex-start !important;
+                align-items: stretch !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                gap: 12px !important;
+                overflow: visible !important;
+            }
+
+            .game-board-wrapper {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                align-items: center !important;
+                margin: 0 auto !important;
+                gap: 12px !important;
+                padding: 0 !important;
+            }
+
+            /* Board should use most of screen width but remain square */
+            .monopoly-board {
+                width: min(94vw, 560px) !important;
+                max-width: 94vw !important;
+                height: auto !important;
+                min-height: 0 !important;
+                aspect-ratio: 1 / 1 !important;
+                margin: 0 auto !important;
+                padding: clamp(6px, 1.5vw, 10px) !important;
+            }
+
+            /* Side panel becomes full-width stack below board */
+            .game-panel {
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                gap: 10px !important;
+                overflow: visible !important;
+            }
+
+            /* Status and metric blocks collapse to natural height */
+            .status-bar,
+            .status-left,
+            .status-summary,
+            .panel-summary-grid {
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* Prevent large gaps from grid or flex rules used on desktop */
+            .game-main .monopoly-board,
+            .game-main .control-group,
+            .game-panel {
+                gap: 8px !important;
+            }
+
+            /* Ensure board token hidden/visible logic still works but not affected */
+            #player-token {
+                position: absolute !important;
+            }
+        }
+    </style>
         .btn-dir {
             border-color: rgba(127, 167, 225, 0.32);
         }
