@@ -4045,6 +4045,85 @@
                 font-size: clamp(11px, 2.8vw, 15px);
             }
         }
+        /* ===== QUIZ CARD TYPOGRAPHY OVERRIDES =====
+           Centralized rules to remove conflicting small font sizes
+           and provide consistent hierarchy across desktop & mobile.
+        */
+
+        @media (min-width: 768px) {
+            /* Card title (most prominent) */
+            #quiz-cards-overlay .card-title {
+                font-size: 15px !important;
+                line-height: 1.35 !important;
+                font-weight: 700 !important;
+            }
+
+            /* Question / card content */
+            #quiz-cards-overlay .question-card .card-content,
+            #quiz-cards-overlay .question-card .card-content p,
+            #quiz-cards-overlay .question-text,
+            #quiz-cards-overlay .description-card .card-content,
+            #quiz-cards-overlay .description-card .card-content p,
+            #quiz-cards-overlay .card-content {
+                font-size: 13px !important;
+                line-height: 1.5 !important;
+                font-weight: 400 !important;
+            }
+
+            /* Answer options */
+            #quiz-cards-overlay .quiz-options button,
+            #quiz-cards-overlay .quiz-opt-btn,
+            #quiz-cards-overlay .question-card .quiz-options button,
+            #quiz-cards-overlay .question-card .quiz-opt-btn {
+                font-size: 13px !important;
+                line-height: 1.45 !important;
+                font-weight: 500 !important;
+                padding: 10px 12px !important;
+            }
+
+            /* Prevent nested tags from changing visual scale */
+            #quiz-cards-overlay .card-title *,
+            #quiz-cards-overlay .card-content * {
+                font-size: inherit !important;
+                line-height: inherit !important;
+                font-weight: inherit !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            /* Mobile: slightly larger body text for readability */
+            #quiz-cards-overlay .card-title {
+                font-size: 15px !important;
+                line-height: 1.35 !important;
+                font-weight: 700 !important;
+            }
+
+            #quiz-cards-overlay .question-card .card-content,
+            #quiz-cards-overlay .question-card .card-content p,
+            #quiz-cards-overlay .question-text,
+            #quiz-cards-overlay .description-card .card-content,
+            #quiz-cards-overlay .description-card .card-content p,
+            #quiz-cards-overlay .card-content {
+                font-size: 14px !important;
+                line-height: 1.55 !important;
+                font-weight: 400 !important;
+            }
+
+            #quiz-cards-overlay .quiz-options button,
+            #quiz-cards-overlay .quiz-opt-btn {
+                font-size: 14px !important;
+                line-height: 1.45 !important;
+                font-weight: 500 !important;
+                padding: 11px 12px !important;
+            }
+
+            #quiz-cards-overlay .card-title *,
+            #quiz-cards-overlay .card-content * {
+                font-size: inherit !important;
+                line-height: inherit !important;
+                font-weight: inherit !important;
+            }
+        }
     </style>
 </head>
 <body>
