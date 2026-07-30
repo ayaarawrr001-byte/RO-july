@@ -2519,21 +2519,27 @@
             box-sizing: border-box;
         }
 
-        .adventure-player {
+        #adventure-overlay .adventure-player {
             position: absolute;
             width: clamp(100px, 24vw, 125px);
             height: clamp(120px, 29vw, 150px);
             left: 50%;
-            bottom: 18%;
+            bottom: 10%;
             transform: translateX(-50%);
             transition: none;
             font-size: clamp(75px, 15vw, 90px);
             z-index: 10;
         }
 
-        @media (min-width: 1024px) {
-            .adventure-player {
-                bottom: 12%;
+        @media (min-width: 768px) {
+            #adventure-overlay .adventure-player {
+                bottom: 8% !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            #adventure-overlay .adventure-player {
+                bottom: 16%;
             }
         }
 
@@ -6217,7 +6223,7 @@
 
             const player = document.getElementById('adventure-player');
             player.style.left = '50%';
-            player.style.bottom = '18%';
+            player.style.bottom = window.matchMedia('(min-width: 768px)').matches ? '8%' : '16%';
             setPlayerAvatar();
             // pastikan token papan tersembunyi saat mini-game berjalan
             hideBoardToken();
